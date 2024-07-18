@@ -1,10 +1,10 @@
 #[starknet::contract]
 pub mod TokenBridge {
-    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
-    use core::option::OptionTrait;
-    use core::traits::TryInto;
-    use core::starknet::event::EventEmitter;
-    use core::traits::PanicDestruct;
+    // use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
+    // use core::option::OptionTrait;
+    // use core::traits::TryInto;
+    // use core::starknet::event::EventEmitter;
+    // use core::traits::PanicDestruct;
     use core::array::ArrayTrait;
     use core::serde::Serde;
     use openzeppelin::token::erc20::interface::{
@@ -12,15 +12,18 @@ pub mod TokenBridge {
         IERC20MetadataDispatcherTrait
     };
 
+    use cairo_appchain_bridge::bridge::test::NewComponent as WithdrawalLimitComponent;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
 
-    use cairo_appchain_bridge::withdrawal_limit::component::WithdrawalLimitComponent;
+    // use cairo_appchain_bridge::withdrawal_limit::component::WithdrawalLimitComponent;
+    use cairo_appchain_bridge::withdrawal_limit::interface::IWithdrawalLimit;
 
-    component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+    // component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
-    component!(path: WithdrawalLimitComponent, storage: withdrawal, event: WithdrawalEvent);
+    component!(path: WithdrawalLimitComponent, storage: ownable, event: WithdrawalEvent);
+
 
     use core::num::traits::zero::Zero;
     use starknet::{ContractAddress, get_contract_address, get_caller_address, get_block_timestamp};
@@ -35,16 +38,15 @@ pub mod TokenBridge {
 
 
     // Ownable
-    #[abi(embed_v0)]
-    impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
-    impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
+    // #[abi(embed_v0)]
+    // impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
+    // impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
     // WithdrawalLimit
     #[abi(embed_v0)]
-    impl WithdrawalLimitImpl =
-        WithdrawalLimitComponent::WithdrawalLimit<ContractState>;
+    impl WithdrawalLimitImpl = WithdrawalLimitComponent::OwnableImpl<ContractState>;
     impl WithdrawalLimitInternal = WithdrawalLimitComponent::InternalImpl<ContractState>;
 
     #[storage]
@@ -52,12 +54,12 @@ pub mod TokenBridge {
         appchain_bridge: ContractAddress,
         messaging_contract: IMessagingDispatcher,
         token_settings: LegacyMap<ContractAddress, TokenSettings>,
-        #[substorage(v0)]
-        ownable: OwnableComponent::Storage,
+        // #[substorage(v0)]
+        // ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
         #[substorage(v0)]
-        withdrawal: WithdrawalLimitComponent::Storage
+        ownable: WithdrawalLimitComponent::Storage
     }
 
     // 
@@ -90,8 +92,8 @@ pub mod TokenBridge {
         WithdrawalLimitEnabled: WithdrawalLimitEnabled,
         WithdrawalLimitDisabled: WithdrawalLimitDisabled,
         SetMaxTotalBalance: SetMaxTotalBalance,
-        #[flat]
-        OwnableEvent: OwnableComponent::Event,
+        // #[flat]
+        // OwnableEvent: OwnableComponent::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
         #[flat]
@@ -262,9 +264,7 @@ pub mod TokenBridge {
 
         fn send_deploy_message(self: @ContractState, token: ContractAddress) -> felt252 {
             assert(self.appchain_bridge().is_non_zero(), Errors::APPCHAIN_BRIDGE_NOT_SET);
-            // TODO: Check fees not sure if needed
 
-            // TODO: Add the token deployment selector as a constant here
             let (hash, _nonce) = self
                 .messaging_contract
                 .read()

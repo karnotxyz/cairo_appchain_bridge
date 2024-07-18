@@ -1,6 +1,7 @@
 pub mod bridge {
     pub mod token_bridge;
     pub mod interface;
+    pub mod test;
 }
 
 pub mod withdrawal_limit {
