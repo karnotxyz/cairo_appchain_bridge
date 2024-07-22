@@ -15,7 +15,7 @@ snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v
 
 [[target.starknet-contract]]
 casm = true
-build-external-contracts = ["piltover::appchain::appchain"]
+build-external-contracts = ["piltover::messaging::mock::messaging_mock"]
 
 [scripts]
 test = "snforge test"

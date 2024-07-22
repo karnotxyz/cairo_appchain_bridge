@@ -89,7 +89,7 @@ pub mod TokenBridge {
 
     #[derive(Drop, starknet::Event)]
     #[event]
-    enum Event {
+    pub enum Event {
         TokenEnrollmentInitiated: TokenEnrollmentInitiated,
         TokenDeactivated: TokenDeactivated,
         TokenBlocked: TokenBlocked,
@@ -103,6 +103,7 @@ pub mod TokenBridge {
         WithdrawalLimitEnabled: WithdrawalLimitEnabled,
         WithdrawalLimitDisabled: WithdrawalLimitDisabled,
         SetMaxTotalBalance: SetMaxTotalBalance,
+        SetAppchainBridge: SetAppchainBridge,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         #[flat]
@@ -114,66 +115,91 @@ pub mod TokenBridge {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct TokenDeactivated {
-        token: ContractAddress
+    pub struct TokenDeactivated {
+        pub token: ContractAddress
     }
 
     #[derive(Drop, starknet::Event)]
-    struct TokenBlocked {
-        token: ContractAddress
+    pub struct TokenBlocked {
+        pub token: ContractAddress
     }
 
     #[derive(Drop, starknet::Event)]
-    struct TokenEnrollmentInitiated {
+    pub struct TokenEnrollmentInitiated {
         token: ContractAddress,
         deployment_message_hash: MessageHash
     }
 
 
     #[derive(Drop, starknet::Event)]
-    struct Deposit {
+    pub struct Deposit {
         #[key]
-        sender: ContractAddress,
+        pub sender: ContractAddress,
         #[key]
-        token: ContractAddress,
-        amount: u256,
+        pub token: ContractAddress,
+        pub amount: u256,
         #[key]
         appchain_recipient: ContractAddress,
-        nonce: Nonce,
+        nonce: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct DepositWithMessage {
+    pub struct DepositWithMessage {
         #[key]
-        sender: ContractAddress,
+        pub sender: ContractAddress,
         #[key]
-        token: ContractAddress,
-        amount: u256,
+        pub token: ContractAddress,
+        pub amount: u256,
         #[key]
         appchain_recipient: ContractAddress,
         message: Span<felt252>,
-        nonce: Nonce,
+        nonce: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
     struct DepositCancelRequest {
         #[key]
-        sender: ContractAddress,
+        pub sender: ContractAddress,
         #[key]
-        token: ContractAddress,
-        amount: u256,
+        pub token: ContractAddress,
+        pub amount: u256,
         #[key]
         appchain_recipient: ContractAddress,
-        nonce: Nonce,
+        nonce: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
     struct DepositWithMessageCancelRequest {
         #[key]
-        sender: ContractAddress,
+        pub sender: ContractAddress,
         #[key]
-        token: ContractAddress,
-        amount: u256,
+        pub token: ContractAddress,
+        pub amount: u256,
+        #[key]
+        pub appchain_recipient: ContractAddress,
+        pub message: Span<felt252>,
+        pub nonce: felt252
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct DepositReclaimed {
+        #[key]
+        pub sender: ContractAddress,
+        #[key]
+        pub token: ContractAddress,
+        pub amount: u256,
+        #[key]
+        appchain_recipient: ContractAddress,
+        nonce: felt252
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct DepositWithMessageReclaimed {
+        #[key]
+        pub sender: ContractAddress,
+        #[key]
+        pub token: ContractAddress,
+        pub amount: u256,
         #[key]
         appchain_recipient: ContractAddress,
         message: Span<felt252>,
@@ -181,60 +207,41 @@ pub mod TokenBridge {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct DepositReclaimed {
+    pub struct Withdrawal {
         #[key]
-        sender: ContractAddress,
+        pub recipient: ContractAddress,
         #[key]
-        token: ContractAddress,
-        amount: u256,
-        #[key]
-        appchain_recipient: ContractAddress,
-        nonce: Nonce
+        pub token: ContractAddress,
+        pub amount: u256,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct DepositWithMessageReclaimed {
+    pub struct WithdrawalLimitEnabled {
         #[key]
-        sender: ContractAddress,
+        pub sender: ContractAddress,
         #[key]
-        token: ContractAddress,
-        amount: u256,
-        #[key]
-        appchain_recipient: ContractAddress,
-        message: Span<felt252>,
-        nonce: Nonce
+        pub token: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct Withdrawal {
+    pub struct WithdrawalLimitDisabled {
         #[key]
-        recipient: ContractAddress,
+        pub sender: ContractAddress,
         #[key]
-        token: ContractAddress,
-        amount: u256,
+        pub token: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct WithdrawalLimitEnabled {
+    pub struct SetMaxTotalBalance {
         #[key]
-        sender: ContractAddress,
-        #[key]
-        token: ContractAddress,
+        pub token: ContractAddress,
+        pub value: u256
     }
 
-    #[derive(Drop, starknet::Event)]
-    struct WithdrawalLimitDisabled {
-        #[key]
-        sender: ContractAddress,
-        #[key]
-        token: ContractAddress,
-    }
 
     #[derive(Drop, starknet::Event)]
-    struct SetMaxTotalBalance {
-        #[key]
-        token: ContractAddress,
-        value: u256
+    pub struct SetAppchainBridge {
+        pub appchain_bridge: ContractAddress
     }
 
     #[constructor]
@@ -365,6 +372,7 @@ pub mod TokenBridge {
         fn set_appchain_token_bridge(ref self: ContractState, appchain_bridge: ContractAddress) {
             self.ownable.assert_only_owner();
             self.appchain_bridge.write(appchain_bridge);
+            self.emit(SetAppchainBridge { appchain_bridge });
         }
 
         // @param token The address of the token contract to be deactivated.
