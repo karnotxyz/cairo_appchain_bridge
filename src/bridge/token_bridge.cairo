@@ -126,8 +126,8 @@ pub mod TokenBridge {
 
     #[derive(Drop, starknet::Event)]
     pub struct TokenEnrollmentInitiated {
-        token: ContractAddress,
-        deployment_message_hash: MessageHash
+        pub token: ContractAddress,
+        pub deployment_message_hash: MessageHash
     }
 
 
@@ -139,8 +139,8 @@ pub mod TokenBridge {
         pub token: ContractAddress,
         pub amount: u256,
         #[key]
-        appchain_recipient: ContractAddress,
-        nonce: felt252,
+        pub appchain_recipient: ContractAddress,
+        pub nonce: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -151,9 +151,9 @@ pub mod TokenBridge {
         pub token: ContractAddress,
         pub amount: u256,
         #[key]
-        appchain_recipient: ContractAddress,
-        message: Span<felt252>,
-        nonce: felt252,
+        pub appchain_recipient: ContractAddress,
+        pub message: Span<felt252>,
+        pub nonce: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -164,8 +164,8 @@ pub mod TokenBridge {
         pub token: ContractAddress,
         pub amount: u256,
         #[key]
-        appchain_recipient: ContractAddress,
-        nonce: felt252,
+        pub appchain_recipient: ContractAddress,
+        pub nonce: felt252,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -189,8 +189,8 @@ pub mod TokenBridge {
         pub token: ContractAddress,
         pub amount: u256,
         #[key]
-        appchain_recipient: ContractAddress,
-        nonce: felt252
+        pub appchain_recipient: ContractAddress,
+        pub nonce: felt252
     }
 
     #[derive(Drop, starknet::Event)]
@@ -201,9 +201,9 @@ pub mod TokenBridge {
         pub token: ContractAddress,
         pub amount: u256,
         #[key]
-        appchain_recipient: ContractAddress,
-        message: Span<felt252>,
-        nonce: felt252
+        pub appchain_recipient: ContractAddress,
+        pub message: Span<felt252>,
+        pub nonce: felt252
     }
 
     #[derive(Drop, starknet::Event)]
