@@ -84,6 +84,7 @@ pub mod TokenBridge {
         pub const CANNOT_DEACTIVATE: felt252 = 'Cannot deactivate and block';
         pub const CANNOT_BLOCK: felt252 = 'Cannot block';
         pub const INVALID_RECIPIENT: felt252 = 'Invalid recipient';
+        pub const MAX_BALANCE_EXCEEDED: felt252 = 'Max Balance Exceeded';
     }
 
 
@@ -322,6 +323,16 @@ pub mod TokenBridge {
             };
             self.token_settings.write(token, new_settings);
         }
+
+        fn accept_deposit(self: @ContractState, token: ContractAddress, amount: u256) {
+            let caller = get_caller_address();
+            let dispatcher = IERC20Dispatcher { contract_address: token };
+
+            let currentBalance: u256 = dispatcher.balance_of(get_contract_address());
+            let max_total_balance = self.get_max_total_balance(token);
+            assert(currentBalance + amount < max_total_balance, Errors::MAX_BALANCE_EXCEEDED);
+            dispatcher.transfer_from(caller, get_contract_address(), amount);
+        }
     }
 
 
@@ -356,14 +367,6 @@ pub mod TokenBridge {
         dispatcher.symbol().serialize(ref calldata);
         dispatcher.decimals().serialize(ref calldata);
         calldata.span()
-    }
-
-
-    fn accept_deposit(token: ContractAddress, amount: u256) {
-        let caller = get_caller_address();
-        let dispatcher = IERC20Dispatcher { contract_address: token };
-        assert(dispatcher.balance_of(caller) == amount, 'Not enough balance');
-        dispatcher.transfer_from(caller, get_contract_address(), amount);
     }
 
 
@@ -475,7 +478,7 @@ pub mod TokenBridge {
             appchain_recipient: ContractAddress
         ) {
             let no_message: Span<felt252> = array![].span();
-            accept_deposit(token, amount);
+            self.accept_deposit(token, amount);
             let nonce = self
                 .send_deposit_message(
                     token,
@@ -509,7 +512,7 @@ pub mod TokenBridge {
             appchain_recipient: ContractAddress,
             message: Span<felt252>
         ) {
-            accept_deposit(token, amount);
+            self.accept_deposit(token, amount);
             let nonce = self
                 .send_deposit_message(
                     token,
@@ -742,6 +745,14 @@ pub mod TokenBridge {
 
         fn is_withdrawal_limit_applied(self: @ContractState, token: ContractAddress) -> bool {
             self.token_settings.read(token).withdrawal_limit_applied
+        }
+
+        fn get_max_total_balance(self: @ContractState, token: ContractAddress) -> u256 {
+            let max_total_balance = self.token_settings.read(token).max_total_balance;
+            if (max_total_balance == 0) {
+                return core::integer::BoundedInt::max();
+            }
+            return max_total_balance;
         }
     }
 

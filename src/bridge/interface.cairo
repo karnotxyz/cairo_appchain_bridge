@@ -74,4 +74,5 @@ pub trait ITokenBridge<TContractState> {
         nonce: felt252
     );
     fn get_remaining_intraday_allowance(self: @TContractState, token: ContractAddress) -> u256;
+    fn get_max_total_balance(self: @TContractState, token: ContractAddress) -> u256;
 }
