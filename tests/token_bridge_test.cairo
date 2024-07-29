@@ -124,7 +124,7 @@ mod tests {
     #[test]
     #[should_panic(expected: ('Caller is not the owner',))]
     fn set_appchain_bridge_not_owner() {
-        let (token_bridge, mut spy) = deploy_token_bridge();
+        let (token_bridge, _) = deploy_token_bridge();
         let token_bridge_admin = ITokenBridgeAdminDispatcher {
             contract_address: token_bridge.contract_address
         };
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn enroll_token_ok() {
-        let (token_bridge, mut spy) = deploy_token_bridge();
+        let (token_bridge, _) = deploy_token_bridge();
 
         let usdc_address = deploy_erc20("USDC", "USDC");
 
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     #[should_panic(expected: ('Caller is not the owner',))]
     fn set_max_total_balance_not_owner() {
-        let (token_bridge, mut spy) = deploy_token_bridge();
+        let (token_bridge, _) = deploy_token_bridge();
         let token_bridge_admin = ITokenBridgeAdminDispatcher {
             contract_address: token_bridge.contract_address
         };
@@ -183,7 +183,7 @@ mod tests {
             contract_address: token_bridge.contract_address
         };
 
-        let usdc_address = deploy_erc20("USDC", "USDC");
+        let usdc_address = deploy_erc20("usdc", "usdc");
 
         let owner = contract_address_const::<'owner'>();
         // Cheat for the owner
@@ -202,6 +202,46 @@ mod tests {
             .assert_emitted(
                 @array![(token_bridge.contract_address, Event::SetMaxTotalBalance(expected_event))]
             );
+    }
+
+
+    #[test]
+    fn block_token_ok() {
+        let (token_bridge, mut spy) = deploy_token_bridge();
+        let token_bridge_admin = ITokenBridgeAdminDispatcher {
+            contract_address: token_bridge.contract_address
+        };
+
+        let usdc_address = deploy_erc20("usdc", "usdc");
+
+        let owner = contract_address_const::<'owner'>();
+        // Cheat for the owner
+        snf::start_cheat_caller_address(token_bridge.contract_address, owner);
+        token_bridge_admin.block_token(usdc_address);
+
+        let expected_event = TokenBridge::TokenBlocked { token: usdc_address };
+        spy
+            .assert_emitted(
+                @array![(token_bridge.contract_address, Event::TokenBlocked(expected_event))]
+            );
+
+        assert(token_bridge.get_status(usdc_address) == TokenStatus::Blocked, 'Should be blocked');
+
+        snf::stop_cheat_caller_address(token_bridge.contract_address);
+    }
+
+
+    #[test]
+    #[should_panic(expected: ('Caller is not the owner',))]
+    fn block_token_not_owner() {
+        let (token_bridge, _) = deploy_token_bridge();
+        let token_bridge_admin = ITokenBridgeAdminDispatcher {
+            contract_address: token_bridge.contract_address
+        };
+
+        let usdc_address = deploy_erc20("usdc", "usdc");
+
+        token_bridge_admin.block_token(usdc_address);
     }
 }
 
