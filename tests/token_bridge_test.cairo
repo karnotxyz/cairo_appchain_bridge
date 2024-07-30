@@ -313,5 +313,31 @@ mod tests {
         );
         snf::stop_cheat_caller_address(token_bridge.contract_address);
     }
+
+    #[test]
+    #[should_panic(expected: ('Caller is not the owner',))]
+    fn disable_withdrwal_not_owner() {
+        let (token_bridge, _) = deploy_token_bridge();
+        let token_bridge_admin = ITokenBridgeAdminDispatcher {
+            contract_address: token_bridge.contract_address
+        };
+
+        let owner = contract_address_const::<'owner'>();
+        snf::start_cheat_caller_address(token_bridge.contract_address, owner);
+
+        let usdc_address = deploy_erc20("USDC", "USDC");
+        token_bridge_admin.enable_withdrawal_limit(usdc_address);
+
+        // Withdrawal limit is now applied
+        assert(token_bridge.is_withdrawal_limit_applied(usdc_address), 'Limit not applied');
+
+        snf::stop_cheat_caller_address(token_bridge.contract_address);
+
+        token_bridge_admin.disable_withdrawal_limit(usdc_address);
+
+        assert(
+            token_bridge.is_withdrawal_limit_applied(usdc_address) == false, 'Limit not applied'
+        );
+    }
 }
 
