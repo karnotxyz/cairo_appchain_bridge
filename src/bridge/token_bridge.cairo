@@ -1,6 +1,6 @@
 #[starknet::contract]
 pub mod TokenBridge {
-    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
+    use starknet_bridge::withdrawal_limit::component::WithdrawalLimitComponent::InternalTrait;
     use core::option::OptionTrait;
     use core::traits::TryInto;
     use core::starknet::event::EventEmitter;
@@ -458,16 +458,19 @@ pub mod TokenBridge {
                 .sn_to_appchain_messages(deployment_message_hash);
             assert(nonce.is_non_zero(), Errors::DEPLOYMENT_MESSAGE_DOES_NOT_EXIST);
 
-            let token_status = TokenSettings {
+            // Reading existing settings as withdrawal_limit_applied and max_total_balance
+            // can be set before the token is enrolled.
+
+            let old_settings = self.token_settings.read(token);
+            let new_settings = TokenSettings {
                 token_status: TokenStatus::Pending,
                 deployment_message_hash: deployment_message_hash,
                 pending_deployment_expiration: get_block_timestamp()
                     + constants::MAX_PENDING_DURATION.try_into().unwrap(),
-                max_total_balance: core::integer::BoundedInt::max(),
-                withdrawal_limit_applied: false
+                ..old_settings
             };
 
-            self.token_settings.write(token, token_status);
+            self.token_settings.write(token, new_settings);
             self.emit(TokenEnrollmentInitiated { token, deployment_message_hash });
         }
 
@@ -570,10 +573,11 @@ pub mod TokenBridge {
             assert(recipient.is_non_zero(), Errors::INVALID_RECIPIENT);
 
             self.consume_message(token, amount, recipient);
-            let settings = self.token_settings.read(token);
-            // TODO: Consume quota from here
-            // DEP(byteZorvin): Complete the withdrawal component in cairo 
-            if (settings.withdrawal_limit_applied) {}
+
+            if (self.is_withdrawal_limit_applied(token)) {
+                self.withdrawal.consume_withdrawal_quota(token, amount);
+            }
+
             let tokenDispatcher = IERC20Dispatcher { contract_address: token };
             tokenDispatcher.transfer(recipient, amount);
             self.reentrancy_guard.end();
@@ -722,25 +726,6 @@ pub mod TokenBridge {
 
         fn is_servicing_token(self: @ContractState, token: ContractAddress) -> bool {
             self.token_settings.read(token).token_status == TokenStatus::Active
-        }
-
-        // /**
-        //     Returns the remaining amount of withdrawal allowed for this day.
-        //     If the daily allowance was not yet set, it is calculated and returned.
-        //     If the withdraw limit is not enabled for that token - the uint256.max is returned.
-        //  */
-        // function getRemainingIntradayAllowance(address token) external view returns (uint256) {
-        //     return
-        //         tokenSettings()[token].withdrawalLimitApplied
-        //             ? WithdrawalLimit.getRemainingIntradayAllowance(token)
-        //             : type(uint256).max;
-        // }
-        fn get_remaining_intraday_allowance(self: @ContractState, token: ContractAddress) -> u256 {
-            if (self.token_settings.read(token).withdrawal_limit_applied) {
-                return core::integer::BoundedInt::max();
-            }
-            // TODO: Write the WithdrawalLimit functionality
-            return 0;
         }
 
         fn is_withdrawal_limit_applied(self: @ContractState, token: ContractAddress) -> bool {

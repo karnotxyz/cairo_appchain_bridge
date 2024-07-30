@@ -243,5 +243,75 @@ mod tests {
 
         token_bridge_admin.block_token(usdc_address);
     }
+
+    #[test]
+    #[should_panic(expected: ('Cannot block',))]
+    fn block_token_pending() {
+        let (token_bridge, _) = deploy_token_bridge();
+        let token_bridge_admin = ITokenBridgeAdminDispatcher {
+            contract_address: token_bridge.contract_address
+        };
+
+        let owner = contract_address_const::<'owner'>();
+        let usdc_address = deploy_erc20("usdc", "usdc");
+        token_bridge.enroll_token(usdc_address);
+
+        snf::start_cheat_caller_address(token_bridge.contract_address, owner);
+        token_bridge_admin.block_token(usdc_address);
+    }
+
+    #[test]
+    #[should_panic(expected: ('Caller is not the owner',))]
+    fn enable_withdrawal_limit_not_owner() {
+        let (token_bridge, _) = deploy_token_bridge();
+        let token_bridge_admin = ITokenBridgeAdminDispatcher {
+            contract_address: token_bridge.contract_address
+        };
+
+        let usdc_address = deploy_erc20("USDC", "USDC");
+        token_bridge_admin.enable_withdrawal_limit(usdc_address);
+    }
+
+    #[test]
+    fn enable_withdrawal_limit_ok() {
+        let (token_bridge, _) = deploy_token_bridge();
+        let token_bridge_admin = ITokenBridgeAdminDispatcher {
+            contract_address: token_bridge.contract_address
+        };
+
+        let owner = contract_address_const::<'owner'>();
+        snf::start_cheat_caller_address(token_bridge.contract_address, owner);
+
+        let usdc_address = deploy_erc20("USDC", "USDC");
+        token_bridge_admin.enable_withdrawal_limit(usdc_address);
+
+        snf::stop_cheat_caller_address(token_bridge.contract_address);
+
+        assert(token_bridge.is_withdrawal_limit_applied(usdc_address), 'Limit not applied');
+    }
+
+    #[test]
+    fn disable_withdrwal_limit_ok() {
+        let (token_bridge, _) = deploy_token_bridge();
+        let token_bridge_admin = ITokenBridgeAdminDispatcher {
+            contract_address: token_bridge.contract_address
+        };
+
+        let owner = contract_address_const::<'owner'>();
+        snf::start_cheat_caller_address(token_bridge.contract_address, owner);
+
+        let usdc_address = deploy_erc20("USDC", "USDC");
+        token_bridge_admin.enable_withdrawal_limit(usdc_address);
+
+        // Withdrawal limit is now applied
+        assert(token_bridge.is_withdrawal_limit_applied(usdc_address), 'Limit not applied');
+
+        token_bridge_admin.disable_withdrawal_limit(usdc_address);
+
+        assert(
+            token_bridge.is_withdrawal_limit_applied(usdc_address) == false, 'Limit not applied'
+        );
+        snf::stop_cheat_caller_address(token_bridge.contract_address);
+    }
 }
 
