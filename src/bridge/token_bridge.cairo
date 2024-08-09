@@ -272,7 +272,7 @@ pub mod TokenBridge {
 
 
     #[constructor]
-    fn constructor(
+    pub fn constructor(
         ref self: ContractState,
         appchain_bridge: ContractAddress,
         messaging_contract: ContractAddress,

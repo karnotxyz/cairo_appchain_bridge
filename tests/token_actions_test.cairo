@@ -139,3 +139,21 @@ fn disable_withdrawal_limit_not_owner() {
         withdrawal_limit.is_withdrawal_limit_applied(usdc_address) == false, 'Limit not applied'
     );
 }
+
+#[test]
+fn is_withdrawal_limit_applied_ok() {
+    let (token_bridge, _) = deploy_token_bridge();
+    let token_bridge_admin = ITokenBridgeAdminDispatcher {
+        contract_address: token_bridge.contract_address
+    };
+    let withdrawal_limit = IWithdrawalLimitStatusDispatcher {
+        contract_address: token_bridge.contract_address
+    };
+
+    snf::start_cheat_caller_address(token_bridge.contract_address, OWNER());
+    let usdc_address = USDC_MOCK_ADDRESS();
+    token_bridge_admin.enable_withdrawal_limit(usdc_address);
+    snf::stop_cheat_caller_address(token_bridge.contract_address);
+
+    assert(withdrawal_limit.is_withdrawal_limit_applied(usdc_address), 'Limit not applied');
+}

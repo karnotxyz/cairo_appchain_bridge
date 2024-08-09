@@ -83,9 +83,6 @@ fn set_appchain_bridge_not_owner() {
     // Set and check new bridge
     let new_appchain_bridge_address = contract_address_const::<'l3_bridge_address_new'>();
     token_bridge_admin.set_appchain_token_bridge(new_appchain_bridge_address);
-    assert(
-        token_bridge.appchain_bridge() == new_appchain_bridge_address, 'Appchain bridge not set'
-    );
 }
 
 
@@ -97,7 +94,7 @@ fn set_max_total_balance_not_owner() {
         contract_address: token_bridge.contract_address
     };
 
-    let usdc_address = deploy_erc20("USDC", "USDC");
+    let usdc_address = USDC_MOCK_ADDRESS();
     let decimals = 1000_000;
     token_bridge_admin.set_max_total_balance(usdc_address, 50 * decimals);
 }
@@ -110,7 +107,7 @@ fn set_max_total_balance_ok() {
         contract_address: token_bridge.contract_address
     };
 
-    let usdc_address = deploy_erc20("usdc", "usdc");
+    let usdc_address = USDC_MOCK_ADDRESS();
 
     let owner = OWNER();
     // Cheat for the owner
