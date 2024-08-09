@@ -56,9 +56,11 @@ pub mod ERC20 {
         self.erc20.mint(recipient, fixed_supply);
     }
 
+
     #[generate_trait]
+    #[abi(per_item)]
     impl IERC20Impl of IERC20Trait {
-        #[abi(per_item)]
+        #[external(v0)]
         fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) {
             assert(amount < 100 * DECIMALS, 'Max 100 tokens only.');
             self.erc20.mint(recipient, amount);

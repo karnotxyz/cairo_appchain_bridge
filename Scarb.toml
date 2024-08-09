@@ -11,10 +11,11 @@ starknet = "2.6.4"
 piltover = { git = "https://github.com/byteZorvin/piltover", branch="bridge-testing"}
 
 [dev-dependencies]
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.26.0" }
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.27.0" }
 
 [[target.starknet-contract]]
 casm = true
+
 
 [scripts]
 test = "snforge test"

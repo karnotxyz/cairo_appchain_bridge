@@ -83,7 +83,9 @@ pub mod WithdrawalLimitComponent {
             token: ContractAddress,
             amount_to_withdraw: u256
         ) {
-            assert(self.get_contract().is_withdrawal_limit_applied(:token), 'LIMIT_NOT_ENABLED');
+            if (!self.get_contract().is_withdrawal_limit_applied(:token)) {
+                return;
+            }
             let remaining_withdrawal_quota = self.get_remaining_withdrawal_quota(token);
 
             assert(remaining_withdrawal_quota >= amount_to_withdraw, 'LIMIT_EXCEEDED');

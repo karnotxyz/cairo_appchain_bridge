@@ -1,9 +1,12 @@
-use starknet_bridge::bridge::token_bridge::TokenBridge::__member_module_token_settings::InternalContractMemberStateTrait;
+use starknet_bridge::bridge::token_bridge::TokenBridge::__member_module_appchain_bridge::InternalContractMemberStateTrait;
+use starknet_bridge::bridge::token_bridge::TokenBridge::TokenBridgeInternal;
+use starknet_bridge::bridge::token_bridge::TokenBridge::__member_module_token_settings::InternalContractMemberStateTrait as tokenSettingsStateTrait;
 use snforge_std as snf;
 use starknet::{ContractAddress, storage::StorageMemberAccessTrait};
 use starknet_bridge::mocks::{
     messaging::{IMockMessagingDispatcherTrait, IMockMessagingDispatcher}, erc20::ERC20
 };
+use piltover::messaging::interface::IMessagingDispatcher;
 use starknet_bridge::bridge::{
     ITokenBridge, ITokenBridgeAdmin, ITokenBridgeDispatcher, ITokenBridgeDispatcherTrait,
     ITokenBridgeAdminDispatcher, ITokenBridgeAdminDispatcherTrait, IWithdrawalLimitStatusDispatcher,
@@ -34,7 +37,7 @@ fn block_token_ok() {
     let usdc_address = USDC_MOCK_ADDRESS();
 
     mock.ownable.Ownable_owner.write(OWNER());
-    snf::cheat_caller_address_global(OWNER());
+    snf::start_cheat_caller_address_global(OWNER());
 
     mock.block_token(usdc_address);
     assert(mock.get_status(usdc_address) == TokenStatus::Blocked, 'Token not blocked');
@@ -48,7 +51,7 @@ fn block_token_not_owner() {
     let usdc_address = USDC_MOCK_ADDRESS();
 
     mock.ownable.Ownable_owner.write(OWNER());
-    snf::cheat_caller_address_global(snf::test_address());
+    snf::start_cheat_caller_address_global(snf::test_address());
 
     mock.block_token(usdc_address);
 }
@@ -66,7 +69,7 @@ fn block_token_not_unknown() {
         .write(usdc_address, TokenSettings { token_status: TokenStatus::Active, ..old_settings });
 
     mock.ownable.Ownable_owner.write(OWNER());
-    snf::cheat_caller_address_global(OWNER());
+    snf::start_cheat_caller_address_global(OWNER());
 
     mock.block_token(usdc_address);
 }
@@ -83,7 +86,7 @@ fn unblock_token_ok() {
         .write(usdc_address, TokenSettings { token_status: TokenStatus::Blocked, ..old_settings });
 
     mock.ownable.Ownable_owner.write(OWNER());
-    snf::cheat_caller_address_global(OWNER());
+    snf::start_cheat_caller_address_global(OWNER());
 
     mock.unblock_token(usdc_address);
     assert(mock.get_status(usdc_address) == TokenStatus::Unknown, 'Not unblocked');
@@ -102,7 +105,7 @@ fn unblock_token_not_owner() {
         .write(usdc_address, TokenSettings { token_status: TokenStatus::Blocked, ..old_settings });
 
     mock.ownable.Ownable_owner.write(OWNER());
-    snf::cheat_caller_address_global(snf::test_address());
+    snf::start_cheat_caller_address_global(snf::test_address());
 
     mock.unblock_token(usdc_address);
 }
@@ -121,7 +124,7 @@ fn unblock_token_not_blocked() {
         .write(usdc_address, TokenSettings { token_status: TokenStatus::Active, ..old_settings });
 
     mock.ownable.Ownable_owner.write(OWNER());
-    snf::cheat_caller_address_global(OWNER());
+    snf::start_cheat_caller_address_global(OWNER());
 
     mock.unblock_token(usdc_address);
 }
@@ -141,7 +144,7 @@ fn reactivate_token_ok() {
 
     mock.ownable.Ownable_owner.write(OWNER());
 
-    snf::cheat_caller_address_global(OWNER());
+    snf::start_cheat_caller_address_global(OWNER());
 
     mock.reactivate_token(usdc_address);
     assert(mock.get_status(usdc_address) == TokenStatus::Active, 'Did not reactivate');
@@ -161,7 +164,7 @@ fn reactivate_token_not_owner() {
             usdc_address, TokenSettings { token_status: TokenStatus::Deactivated, ..old_settings }
         );
 
-    snf::cheat_caller_address_global(snf::test_address());
+    snf::start_cheat_caller_address_global(snf::test_address());
 
     mock.reactivate_token(usdc_address);
 }
@@ -179,8 +182,36 @@ fn reactivate_token_not_deactivated() {
         .write(usdc_address, TokenSettings { token_status: TokenStatus::Blocked, ..old_settings });
 
     mock.ownable.Ownable_owner.write(OWNER());
-    snf::cheat_caller_address_global(OWNER());
+    snf::start_cheat_caller_address_global(OWNER());
 
     mock.reactivate_token(usdc_address);
 }
 
+#[test]
+#[should_panic(expected: ('Incorrect token status',))]
+fn enroll_token_blocked() {
+    let mut mock = mock_state_testing();
+
+    let usdc_address = USDC_MOCK_ADDRESS();
+
+    // Setting the token active
+    let old_settings = mock.token_settings.read(usdc_address);
+    mock
+        .token_settings
+        .write(usdc_address, TokenSettings { token_status: TokenStatus::Blocked, ..old_settings });
+
+    mock.ownable.Ownable_owner.write(OWNER());
+
+    snf::start_cheat_caller_address_global(OWNER());
+    mock.enroll_token(usdc_address);
+}
+
+#[test]
+#[should_panic(expected: ('Invalid recipient',))]
+fn consume_message_zero_recipient() {
+    let mut mock = mock_state_testing();
+    let usdc_address = USDC_MOCK_ADDRESS();
+
+    mock.appchain_bridge.write(L3_BRIDGE_ADDRESS());
+    mock.consume_message(usdc_address, 100, contract_address_const::<0>());
+}

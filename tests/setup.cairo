@@ -1,5 +1,7 @@
 use snforge_std as snf;
-use snforge_std::{ContractClassTrait, EventSpy, EventSpyTrait, EventSpyAssertionsTrait};
+use snforge_std::{
+    ContractClassTrait, EventSpy, EventSpyTrait, EventsFilterTrait, EventSpyAssertionsTrait
+};
 use starknet::{ContractAddress, storage::StorageMemberAccessTrait};
 use starknet_bridge::mocks::{
     messaging::{IMockMessagingDispatcherTrait, IMockMessagingDispatcher}, erc20::ERC20
@@ -14,8 +16,12 @@ use openzeppelin::access::ownable::{
     OwnableComponent, OwnableComponent::Event as OwnableEvent,
     interface::{IOwnableTwoStepDispatcher, IOwnableTwoStepDispatcherTrait}
 };
+use openzeppelin::token::erc20::interface::{IERC20, IERC20Dispatcher, IERC20DispatcherTrait};
 use starknet::contract_address::{contract_address_const};
 use super::constants::{OWNER, L3_BRIDGE_ADDRESS, DELAY_TIME};
+use starknet_bridge::constants;
+use starknet_bridge::bridge::tests::utils::message_payloads;
+
 
 pub fn deploy_erc20(name: ByteArray, symbol: ByteArray) -> ContractAddress {
     let erc20_class_hash = snf::declare("ERC20").unwrap();
@@ -27,6 +33,14 @@ pub fn deploy_erc20(name: ByteArray, symbol: ByteArray) -> ContractAddress {
     OWNER().serialize(ref constructor_args);
 
     let (usdc, _) = erc20_class_hash.deploy(@constructor_args).unwrap();
+
+    let usdc_token = IERC20Dispatcher { contract_address: usdc };
+
+    // Transfering usdc to test address for testing
+    snf::start_cheat_caller_address(usdc, OWNER());
+    usdc_token.transfer(snf::test_address(), 100);
+    snf::stop_cheat_caller_address(usdc);
+
     return usdc;
 }
 
@@ -75,4 +89,28 @@ pub fn deploy_token_bridge() -> (ITokenBridgeDispatcher, EventSpy) {
 /// You can't spy event with this. Use deploy instead.
 pub fn mock_state_testing() -> TokenBridge::ContractState {
     TokenBridge::contract_state_for_testing()
+}
+
+pub fn enroll_token_and_settle(
+    token_bridge: ITokenBridgeDispatcher,
+    messaging_mock: IMockMessagingDispatcher,
+    token: ContractAddress
+) {
+    assert(token_bridge.get_status(token) == TokenStatus::Unknown, 'Should be Unknown');
+
+    token_bridge.enroll_token(token);
+    assert(token_bridge.get_status(token) == TokenStatus::Pending, 'Should be Pending');
+
+    // Settles the message sent to appchain
+    messaging_mock
+        .process_last_message_to_appchain(
+            L3_BRIDGE_ADDRESS(),
+            constants::HANDLE_TOKEN_DEPLOYMENT_SELECTOR,
+            message_payloads::deployment_message_payload(token)
+        );
+
+    token_bridge.check_deployment_status(token);
+
+    let final_status = token_bridge.get_status(token);
+    assert(final_status == TokenStatus::Active, 'Should be Active');
 }
