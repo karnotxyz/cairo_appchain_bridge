@@ -206,6 +206,7 @@ fn enroll_token_blocked() {
     mock.enroll_token(usdc_address);
 }
 
+
 #[test]
 #[should_panic(expected: ('Invalid recipient',))]
 fn consume_message_zero_recipient() {
@@ -215,3 +216,4 @@ fn consume_message_zero_recipient() {
     mock.appchain_bridge.write(L3_BRIDGE_ADDRESS());
     mock.consume_message(usdc_address, 100, contract_address_const::<0>());
 }
+

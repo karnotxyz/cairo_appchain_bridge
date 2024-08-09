@@ -5,4 +5,5 @@ mod token_actions_test;
 mod enroll_token_test;
 mod deposit_test;
 mod withdraw_test;
+mod deposit_reclaim_test;
 

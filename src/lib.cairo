@@ -6,7 +6,6 @@ pub mod bridge {
     #[cfg(test)]
     pub mod tests {
         pub mod constants;
-        mod test_bridge;
         mod token_actions_test;
         pub mod utils {
             pub mod message_payloads;

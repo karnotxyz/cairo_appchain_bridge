@@ -86,6 +86,26 @@ fn deposit_insufficient_allowance() {
     token_bridge.deposit(usdc_address, 100, snf::test_address());
 }
 
+
+#[test]
+#[should_panic(expected: ('Only servicing tokens',))]
+fn deposit_deactivated() {
+    let (token_bridge, _, messaging_mock) = deploy_token_bridge_with_messaging();
+    let usdc_address = deploy_erc20("usdc", "usdc");
+    let token_bridge_admin = ITokenBridgeAdminDispatcher {
+        contract_address: token_bridge.contract_address
+    };
+
+    enroll_token_and_settle(token_bridge, messaging_mock, usdc_address);
+
+    snf::start_cheat_caller_address(token_bridge.contract_address, OWNER());
+    token_bridge_admin.deactivate_token(usdc_address);
+    snf::stop_cheat_caller_address(OWNER());
+
+    token_bridge.deposit(usdc_address, 100, snf::test_address());
+}
+
+
 #[test]
 fn deposit_with_message_ok() {
     let (token_bridge, mut spy, messaging_mock) = deploy_token_bridge_with_messaging();
@@ -169,21 +189,34 @@ fn deposit_with_message_empty_message_ok() {
 }
 
 #[test]
-#[should_panic(expected: ('Only servicing tokens',))]
-fn deposit_deactivated() {
+#[should_panic(expected: ('ERC20: insufficient balance',))]
+fn deposit_with_message_insufficient_balance() {
     let (token_bridge, _, messaging_mock) = deploy_token_bridge_with_messaging();
     let usdc_address = deploy_erc20("usdc", "usdc");
-    let token_bridge_admin = ITokenBridgeAdminDispatcher {
-        contract_address: token_bridge.contract_address
-    };
+    let usdc = IERC20Dispatcher { contract_address: usdc_address };
 
     enroll_token_and_settle(token_bridge, messaging_mock, usdc_address);
 
-    snf::start_cheat_caller_address(token_bridge.contract_address, OWNER());
-    token_bridge_admin.deactivate_token(usdc_address);
-    snf::stop_cheat_caller_address(OWNER());
+    usdc.approve(token_bridge.contract_address, 200);
 
-    token_bridge.deposit(usdc_address, 100, snf::test_address());
+    let mut calldata = ArrayTrait::new();
+    'param1'.serialize(ref calldata);
+    'param2'.serialize(ref calldata);
+    token_bridge.deposit_with_message(usdc_address, 200, snf::test_address(), calldata.span());
+}
+
+#[test]
+#[should_panic(expected: ('ERC20: insufficient allowance',))]
+fn deposit_with_message_insufficient_allowance() {
+    let (token_bridge, _, messaging_mock) = deploy_token_bridge_with_messaging();
+    let usdc_address = deploy_erc20("usdc", "usdc");
+
+    enroll_token_and_settle(token_bridge, messaging_mock, usdc_address);
+
+    let mut calldata = ArrayTrait::new();
+    'param1'.serialize(ref calldata);
+    'param2'.serialize(ref calldata);
+    token_bridge.deposit_with_message(usdc_address, 100, snf::test_address(), calldata.span());
 }
 
 #[test]
